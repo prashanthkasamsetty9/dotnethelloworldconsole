@@ -1,0 +1,57 @@
+name: '$(Date:yyyyMMdd).$(Rev:r)'
+
+trigger: none
+
+parameters:
+- name: Analyse_Packages
+  displayName: Analyse Packages
+  type: boolean
+  default: true
+- name: Publish_Package
+  displayName: Publish Package
+  type: boolean
+  default: true
+
+
+variables:
+- name: Solution
+  value: '**/*.sln'
+- name: Build_Configuration
+  value: 'Release'
+- name: Build_Platform
+  value: 'Any CPU'
+- name: Build_Architecture
+  value: 'x64'
+- name: Analyse_Packages
+  value: ${{parameters.Analyse_Packages}}
+
+
+stages:
+  - stage: Build
+    pool:
+      vmImage: 'windows-2019'
+    displayName: Calculate Version & Build RegOps Artifact
+    dependsOn:
+    jobs:
+    - job: Build
+      displayName: 'Build'
+      steps:     
+      - task: NuGetToolInstaller@1
+        displayName: 'NuGet Install' 
+
+      - task: NuGetAuthenticate@0
+        displayName: 'NuGet Authenticate'
+
+      - task: NuGetCommand@2
+        displayName: 'NuGet Solution Restore'
+        inputs:
+          command: 'restore'
+          restoreSolution: '**/*.sln'
+          feedsToUse: 'select'
+          vstsFeed: ''
+
+      - task: MSBuild@1
+        inputs:
+         solution: '$(Solution)'
+         platform: '$(Build_Platform)'
+         msbuildArguments: '/p:DeployOnBuild=true /p:SkipInvalidConfigurations=true /p:OutDir="$(System.DefaultWorkingDirectory)\publish_output"'
